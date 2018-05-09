@@ -3,7 +3,30 @@
 // run the response through a filter
 
 const fetch = require('node-fetch');
+const Spotify = require('spotify-web-api-node');
 		
+async function spotifySearch() {
+	// // credentials are optional
+	var spotifyApi = new Spotify({
+	clientId: process.env.SPOTIFY_ID,
+	clientSecret: process.env.SPOTIFY_SEC,
+	//   redirectUri: 'http://www.example.com/callback'
+	});
+
+	// spotifyApi.setAccessToken('<your_access_token>'); // required?
+
+	// // Get Elvis' albums
+	return spotifyApi.getArtistAlbums('43ZHCT0cAZBISjO8DG9PnE').then(
+		function(data) {
+		console.log('Artist albums', data.body);
+		},
+		function(err) {
+		console.error('Spotify prob! ...', err);
+		}
+	);
+}
+
+/*
 function spotifySearch(formatted_terms) {
 	results_buffer = [];
 	filter_list = []; // reset buffers
@@ -60,76 +83,32 @@ function spotifySearch(formatted_terms) {
 			app.informUser("Um. Spotify search error..try again?");
 		});
 }
+*/
 
 // look for songs on musixmatch
-// NOTE I did not see repeat results from musix queries
-// so I did not run response through a filter
-function musixSearch(formatted_terms) {
-	const base_url = `http://api.musixmatch.com/ws/1.1/track.search?q_lyrics=`
-	// var musix_query = 'http://api.musixmatch.com/ws/1.1/track.search?q_lyrics=' + formatted_terms + '&f_has_lyrics=1&s_track_rating=ASC&f_lyrics_language=en&apikey=0bc726067d82f809bd3d1f7b5f0f7c2c&format=JSONP';
+// https://developer.musixmatch.com/documentation/input-parameters
+async function musixSearch(formatted_terms='feel+good') {
+	const base_url = `http://api.musixmatch.com/ws/1.1/track.search?`
 	var musix_query = `${base_url}
-		?q_lyrics=${formatted_terms}
-		&f_has_lyrics=1&s_track_rating=ASC
+		q_lyrics=${formatted_terms}
+		&f_has_lyrics=1
+		&s_track_rating=DESC
 		&f_lyrics_language=en
-		&apikey=${process.env.MUSIXMATCH_KEY}
-		&format=JSONP`;
+		&page_size=15
+		&apikey=${process.env.MUSIXMATCH_KEY}`
 
-		fetch(musix_query)
-		.then((res) => {
-			console.log(res)
-			// var track_list = data.message.body.track_list;
-			// track_list.forEach(function(track) {
-			// 	var track_name = track.track.track_name;
-			// 	var track_artist = track.track.artist_name;
-			// 	var track_lyrics = track.track.track_share_url;
-			// 	var track_cover = track.track.album_coverart_100x100;
-			// 	var track_album = track.track.album_name;
-	
-			// 	// NOTE I currently don't query for spotify url
-			// 	// and stick undefined as placeholder
-			// 	results_buffer.push(new Result("musix", track_name, track_artist, track_album, track_cover, undefined, track_lyrics));
-			// });
-			return res
-		})
-		.catch(err => console.error('ruhroh', err));
-	
-/*
-	$.getJSON(musix_query+'&callback=?', function(data) {
-		var track_list = data.message.body.track_list;
-		track_list.forEach(function(track) {
-			var track_name = track.track.track_name;
-			var track_artist = track.track.artist_name;
-			var track_lyrics = track.track.track_share_url;
-			var track_cover = track.track.album_coverart_100x100;
-			var track_album = track.track.album_name;
+	console.log('requesting... ')
 
-			// NOTE I currently don't query for spotify url
-			// and stick undefined as placeholder
-			results_buffer.push(new Result("musix", track_name, track_artist, track_album, track_cover, undefined, track_lyrics));
-		});
-	})
-		.always(function() {
-			// finally, upate the actual observable in one go
-			// Note this is called regardless of either
-			// service failing to respond
-			self.search_results(results_buffer);
-			// preconfig the map infobox with top result
-			var top_hit = self.search_results()[0];
-			if(top_hit) app.configInfopane(top_hit);
-	})
-		.done(function() {
-			self.message("Track search completed!");
-	})
-		.fail(function(e) {
-			// if both services failed, insert a joke result
-			// can also just check if results_buffer.length=0
-			if (self.message() === "Aw man! Problem with Spotify!") {
-				self.search_results.push(new Result("Oh No", "I'm Sorry", "Sad Pandas"));
-			}
-			self.message("Uh-oh! Problem with MusixMatch!");
-			app.informUser("Hey. MusixMatch error..never give up!");
-	});
-	*/
+	try {
+		const res = await fetch(musix_query)
+		const data = await res.json()
+		console.log('data...', data)
+		return data.message.body
+	} catch (err) {
+		console.log('ruhroh...', err)
+		return { error: true }
+	}
 }
 
 module.exports.musixmatch = musixSearch
+module.exports.spotifySearch = spotifySearch
