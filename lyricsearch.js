@@ -10,10 +10,32 @@ async function spotifySearch() {
 	var spotifyApi = new Spotify({
 	clientId: process.env.SPOTIFY_ID,
 	clientSecret: process.env.SPOTIFY_SEC,
-	//   redirectUri: 'http://www.example.com/callback'
+	//   redirectUri: 'http://localhost:3000/',
 	});
 
 	// spotifyApi.setAccessToken('<your_access_token>'); // required?
+
+	// Retrieve an access token.
+	// NOTE: should check for existing app token first?
+	// If none, make the token request
+	// If exists, immediately proceed with api request
+	const token = await spotifyApi.getAccessToken()
+	console.log('access token...', token)
+
+	if (! token) {
+		await spotifyApi.clientCredentialsGrant().then(
+			function(data) {
+				console.log('The access token expires in ' + data.body['expires_in']);
+				console.log('The access token is ' + data.body['access_token']);
+			
+				// Save the access token so that it's used in future calls
+				spotifyApi.setAccessToken(data.body['access_token']);
+			},
+			function(err) {
+				console.log('Something went wrong when retrieving an access token', err);
+			}
+		);
+	}
 
 	// // Get Elvis' albums
 	return spotifyApi.getArtistAlbums('43ZHCT0cAZBISjO8DG9PnE').then(
