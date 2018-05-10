@@ -4,46 +4,66 @@
 
 const fetch = require('node-fetch');
 const Spotify = require('spotify-web-api-node');
-		
-async function spotifySearch() {
-	// // credentials are optional
-	var spotifyApi = new Spotify({
-	clientId: process.env.SPOTIFY_ID,
-	clientSecret: process.env.SPOTIFY_SEC,
-	//   redirectUri: 'http://localhost:3000/',
-	});
 
-	// spotifyApi.setAccessToken('<your_access_token>'); // required?
+const {
+	MUSIXMATCH_KEY,
+	SPOTIFY_ID,
+	SPOTIFY_SEC,
+} = process.env
+
+// Convenience wrapper for async reqeust calls in a try-catch
+async function handleRequest (async_req) {
+	try {
+		return await async_req()
+	} catch (err) {
+		console.error(`ruhroh: while calling ${async_req.name}...`, err)
+		return null
+	}
+}
+
+async function spotifySearch (formatted_terms='') {
+	// TODO: makes more sense to handle text input param formatting here?
+
+	var spotifyApi = new Spotify({
+		clientId: SPOTIFY_ID,
+		clientSecret: SPOTIFY_SEC,
+	});
 
 	// Retrieve an access token.
 	// NOTE: should check for existing app token first?
 	// If none, make the token request
 	// If exists, immediately proceed with api request
-	const token = await spotifyApi.getAccessToken()
+	const token = spotifyApi.getAccessToken()
 	console.log('access token...', token)
 
-	if (! token) {
-		await spotifyApi.clientCredentialsGrant().then(
-			function(data) {
-				console.log('The access token expires in ' + data.body['expires_in']);
-				console.log('The access token is ' + data.body['access_token']);
+	if (!token) {
+		// await spotifyApi.clientCredentialsGrant()
+		// .then(
+			// function(data) {
+				const auth_data = await spotifyApi.clientCredentialsGrant()
+		
+				console.log('The access token expires in ' + auth_data.body['expires_in']);
+				console.log('The access token is ' + auth_data.body['access_token']);
 			
 				// Save the access token so that it's used in future calls
-				spotifyApi.setAccessToken(data.body['access_token']);
-			},
-			function(err) {
-				console.log('Something went wrong when retrieving an access token', err);
-			}
-		);
+				spotifyApi.setAccessToken(auth_data.body['access_token']);
+			// },
+			// function(err) {
+				// console.log('Something went wrong when retrieving an access token', err);
+			// }
+		// );
 	}
 
 	// // Get Elvis' albums
 	return spotifyApi.getArtistAlbums('43ZHCT0cAZBISjO8DG9PnE').then(
 		function(data) {
-		console.log('Artist albums', data.body);
+			// console.log('Artist albums', data.body);
+			console.log('spotify success! ...', data.headers)
+			return data.body
 		},
 		function(err) {
-		console.error('Spotify prob! ...', err);
+			console.error('Spotify prob! ...', err);
+			return null
 		}
 	);
 }
@@ -109,7 +129,7 @@ function spotifySearch(formatted_terms) {
 
 // look for songs on musixmatch
 // https://developer.musixmatch.com/documentation/input-parameters
-async function musixSearch(formatted_terms='feel+good') {
+async function musixSearch (formatted_terms='feel+good') {
 	const base_url = `http://api.musixmatch.com/ws/1.1/track.search?`
 	var musix_query = `${base_url}
 		q_lyrics=${formatted_terms}
@@ -117,14 +137,14 @@ async function musixSearch(formatted_terms='feel+good') {
 		&s_track_rating=DESC
 		&f_lyrics_language=en
 		&page_size=15
-		&apikey=${process.env.MUSIXMATCH_KEY}`
+		&apikey=${MUSIXMATCH_KEY}`
 
 	console.log('requesting... ')
 
 	try {
 		const res = await fetch(musix_query)
 		const data = await res.json()
-		console.log('data...', data)
+		console.log('data...', data.message.header)
 		return data.message.body
 	} catch (err) {
 		console.log('ruhroh...', err)
