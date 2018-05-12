@@ -11,6 +11,19 @@ const {
 	SPOTIFY_SEC,
 } = process.env
 
+
+// Aggregate search results from both services
+async function searchAll (formatted_terms='') {
+	if (!formatted_terms) return null
+
+	const results = {}
+	results['musixMatch'] = await musixSearch(formatted_terms)
+
+	results['spotify'] = await spotifySearch(formatted_terms)
+
+	return results
+}
+
 // Convenience wrapper for async reqeust calls in a try-catch
 async function handleRequest (async_req) {
 	try {
@@ -132,3 +145,4 @@ async function musixSearch (formatted_terms='feel+good') {
 
 module.exports.musixmatch = musixSearch
 module.exports.spotifySearch = spotifySearch
+module.exports.searchAll = spotifySearch

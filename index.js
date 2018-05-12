@@ -24,8 +24,10 @@ module.exports = async (req, res) => {
         console.log('There was a problem with Spotify. Please try again.')
     }
 
-    send(res, 200, {
-        musix: results && results.track_list,
-        spotify: spotify_results && spotify_results.items,
-    })    
+    const all = await fetchLyrics.searchAll('chili')
+    send(res, 200, all)
+    // send(res, 200, {
+    //     musix: results && results.track_list,
+    //     spotify: spotify_results && spotify_results.items,
+    // })    
 }
