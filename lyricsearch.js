@@ -14,6 +14,7 @@ const {
 // Convenience wrapper for async reqeust calls in a try-catch
 async function handleRequest (async_req) {
 	try {
+		console.log('handling request...', async_req.name)
 		return await async_req()
 	} catch (err) {
 		console.error(`ruhroh: while calling ${async_req.name}...`, err)
@@ -21,51 +22,31 @@ async function handleRequest (async_req) {
 	}
 }
 
-async function spotifySearch (formatted_terms='') {
+async function spotifySearch (formatted_terms='chili') {
 	// TODO: makes more sense to handle text input param formatting here?
 
-	var spotifyApi = new Spotify({
+	let spotifyApi = new Spotify({
 		clientId: SPOTIFY_ID,
 		clientSecret: SPOTIFY_SEC,
 	});
 
 	// Retrieve an access token.
-	// NOTE: should check for existing app token first?
-	// If none, make the token request
-	// If exists, immediately proceed with api request
-	const token = spotifyApi.getAccessToken()
-	console.log('access token...', token)
-
-	if (!token) {
-		// await spotifyApi.clientCredentialsGrant()
-		// .then(
-			// function(data) {
-				const auth_data = await spotifyApi.clientCredentialsGrant()
+	// const token = await spotifyApi.clientCredentialsGrant()
 		
-				console.log('The access token expires in ' + auth_data.body['expires_in']);
-				console.log('The access token is ' + auth_data.body['access_token']);
+	const token = await handleRequest(spotifyApi.clientCredentialsGrant.bind(spotifyApi))
+	// console.log('The access token expires in ' + token.body['expires_in']);
+	// console.log('The access token is ' + token.body['access_token']);
 			
-				// Save the access token so that it's used in future calls
-				spotifyApi.setAccessToken(auth_data.body['access_token']);
-			// },
-			// function(err) {
-				// console.log('Something went wrong when retrieving an access token', err);
-			// }
-		// );
+	// Save the access token so that it's used in future calls
+	let results = null
+	if (token) {
+		spotifyApi.setAccessToken(token.body['access_token']);
+		
+		results = await handleRequest(spotifyApi.searchTracks.bind(spotifyApi, formatted_terms))
+		console.log('spotify results...', results)
 	}
 
-	// // Get Elvis' albums
-	return spotifyApi.getArtistAlbums('43ZHCT0cAZBISjO8DG9PnE').then(
-		function(data) {
-			// console.log('Artist albums', data.body);
-			console.log('spotify success! ...', data.headers)
-			return data.body
-		},
-		function(err) {
-			console.error('Spotify prob! ...', err);
-			return null
-		}
-	);
+	return results
 }
 
 /*
@@ -139,15 +120,12 @@ async function musixSearch (formatted_terms='feel+good') {
 		&page_size=15
 		&apikey=${MUSIXMATCH_KEY}`
 
-	console.log('requesting... ')
-
 	try {
-		const res = await fetch(musix_query)
-		const data = await res.json()
-		console.log('data...', data.message.header)
+		const res = await handleRequest(fetch.bind(null, musix_query))
+		const data = await handleRequest(res.json.bind(res))		
 		return data.message.body
 	} catch (err) {
-		console.log('ruhroh...', err)
+		console.log('MusixSearch error...', err)
 		return { error: true }
 	}
 }

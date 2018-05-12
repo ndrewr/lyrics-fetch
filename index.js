@@ -24,18 +24,8 @@ module.exports = async (req, res) => {
         console.log('There was a problem with Spotify. Please try again.')
     }
 
-    // return  'Done'
-    // send(res, 200, results)
     send(res, 200, {
-        musix: results.track_list,
-        spotify: spotify_results.items,
+        musix: results && results.track_list,
+        spotify: spotify_results && spotify_results.items,
     })    
 }
-
-// const fetch = require('node-fetch');
-
-// module.exports = async () => {
-    // const request = await fetch('https://api.github.com/orgs/zeit/members')
-    // const data = await request.json()
-    // return data
-// };
