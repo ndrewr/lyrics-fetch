@@ -2,6 +2,7 @@
 
 const fetch = require('node-fetch');
 const Spotify = require('spotify-web-api-node');
+const qs = require('querystring');
 
 // REQUIRED from external .env file (see pkg "dotenv")
 const { MUSIXMATCH_KEY, SPOTIFY_ID, SPOTIFY_SEC } = process.env;
@@ -47,6 +48,8 @@ async function searchAll(formatted_terms) {
 
 // NOTE I saw a number of repeat results so I
 // run the response through a filter
+// NOTE: formatted_terms will get escaped by the spotifyApi lib;
+// passing in pre-escaped query breaks the search
 /**
  * look for songs on spotify
  *
@@ -68,6 +71,7 @@ async function spotifySearch(formatted_terms) {
     const data = await handleRequest(
       spotifyApi.searchTracks.bind(spotifyApi, formatted_terms)
     );
+    console.log('spotify...', data);
     results = data.body.tracks.items;
   }
 
@@ -145,12 +149,14 @@ function spotifySearch(formatted_terms) {
 async function musixSearch(formatted_terms) {
   // insert params, remove newline chars
   var musix_query = `${mm_base_url}
-		q_lyrics=${formatted_terms}
-		&f_has_lyrics=1
-		&s_track_rating=DESC
-		&f_lyrics_language=en
-		&page_size=10
-		&apikey=${MUSIXMATCH_KEY}`.replace(/\s/g, '');
+	q_lyrics=${qs.escape(formatted_terms)}
+	&f_has_lyrics=1
+	&s_track_rating=DESC
+	&f_lyrics_language=en
+	&page_size=10
+	&apikey=${MUSIXMATCH_KEY}`.replace(/\s/g, '');
+
+  // console.log('musix...', musix_query)
 
   const res = await handleRequest(fetch.bind(null, musix_query));
   const data = await handleRequest(res.json.bind(res));
