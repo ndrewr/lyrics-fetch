@@ -5,29 +5,29 @@
 require('dotenv').config()
 const {buffer, text, json, send} = require('micro')
 const fetchLyrics = require('./lyricsearch')
+const {match} = require('./utils')
 
 module.exports = async (req, res) => {
+    // NOTE: remove below line when deploying
+    if (req.url === '/favicon.ico') return 'NO favico for U!'
 
-    console.log('checking musicmatch...')
-    const results = await fetchLyrics.musixmatch()
-    if (results.error) {
-        console.log('There was a problem with MusixMatch. Please try again.')
-    } else {
-        console.log('fetching...api returned...', results.track_list.length)
+    // NOTE: in production this should be handled on client so remove
+    // var formatted_terms = self.search_terms().replace( /\s|,/g ,"%20");
+
+    var host = req.headers.host;
+    // var origin = req.headers.origin; // undefined
+    console.log('ncoming...', host, ' and connection: ', req.connection.remoteAddress)
+    if (host !== 'localhost:3000') return 'Nope.'
+
+
+    const formatted_terms = match(req, 'que')
+    console.log('url: ', req.url, '...result: ', formatted_terms)
+
+    if (formatted_terms) {
+        // const all = await fetchLyrics.searchAll(formatted_terms)
+        // send(res, 200, all)
     }
+    else return 'Bad query.'
 
-    console.log('checking spotify...')    
-    const spotify_results = await fetchLyrics.spotifySearch()
-    if (spotify_results) {
-        console.log('fething...api returned...', spotify_results.href)
-    } else {
-        console.log('There was a problem with Spotify. Please try again.')
-    }
-
-    const all = await fetchLyrics.searchAll('chili')
-    send(res, 200, all)
-    // send(res, 200, {
-    //     musix: results && results.track_list,
-    //     spotify: spotify_results && spotify_results.items,
-    // })    
+    return 'OK'
 }

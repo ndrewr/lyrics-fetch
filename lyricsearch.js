@@ -1,33 +1,32 @@
-// look for songs on spotify
-// NOTE I saw a number of repeat results so I
-// run the response through a filter
+// Music lyric search methods
 
 const fetch = require('node-fetch');
 const Spotify = require('spotify-web-api-node');
 
+// REQUIRED from external .env file (see pkg "dotenv")
 const {
 	MUSIXMATCH_KEY,
 	SPOTIFY_ID,
 	SPOTIFY_SEC,
 } = process.env
 
+const mm_base_url = `http://api.musixmatch.com/ws/1.1/track.search?`
 
-// Aggregate search results from both services
-async function searchAll (formatted_terms='') {
-	if (!formatted_terms) return null
+const spotifyApi = new Spotify({
+	clientId: SPOTIFY_ID,
+	clientSecret: SPOTIFY_SEC,
+});
 
-	const results = {}
-	results['musixMatch'] = await musixSearch(formatted_terms)
 
-	results['spotify'] = await spotifySearch(formatted_terms)
-
-	return results
-}
-
-// Convenience wrapper for async reqeust calls in a try-catch
+/**
+ * Convenience wrapper for async reqeust calls in a try-catch
+ * 
+ * @param  {function} async_req
+ * 
+ * @return {promise}
+ */
 async function handleRequest (async_req) {
 	try {
-		console.log('handling request...', async_req.name)
 		return await async_req()
 	} catch (err) {
 		console.error(`ruhroh: while calling ${async_req.name}...`, err)
@@ -35,28 +34,44 @@ async function handleRequest (async_req) {
 	}
 }
 
+
+/**
+ * Aggregate search results from both services
+ * 
+ * @param  {string} formatted_terms
+ * 
+ * @return {object | null}
+ */
+async function searchAll (formatted_terms) {
+	return formatted_terms ? 
+		{
+			musixMatch: await musixSearch(formatted_terms),
+			spotify: await spotifySearch(formatted_terms),
+		}
+		: null
+}
+
+
+// NOTE I saw a number of repeat results so I
+// run the response through a filter
+/**
+ * look for songs on spotify
+ * 
+ * @param  {string} formatted_terms
+ * 
+ * @return {array | null}
+ */
 async function spotifySearch (formatted_terms='chili') {
-	// TODO: makes more sense to handle text input param formatting here?
-
-	let spotifyApi = new Spotify({
-		clientId: SPOTIFY_ID,
-		clientSecret: SPOTIFY_SEC,
-	});
-
 	// Retrieve an access token.
-	// const token = await spotifyApi.clientCredentialsGrant()
-		
 	const token = await handleRequest(spotifyApi.clientCredentialsGrant.bind(spotifyApi))
-	// console.log('The access token expires in ' + token.body['expires_in']);
 	// console.log('The access token is ' + token.body['access_token']);
-			
+
 	// Save the access token so that it's used in future calls
 	let results = null
 	if (token) {
 		spotifyApi.setAccessToken(token.body['access_token']);
-		
-		results = await handleRequest(spotifyApi.searchTracks.bind(spotifyApi, formatted_terms))
-		console.log('spotify results...', results)
+		const data = await handleRequest(spotifyApi.searchTracks.bind(spotifyApi, formatted_terms))
+		results = data.body.tracks.items
 	}
 
 	return results
@@ -121,11 +136,17 @@ function spotifySearch(formatted_terms) {
 }
 */
 
-// look for songs on musixmatch
-// https://developer.musixmatch.com/documentation/input-parameters
+// npm pkg: https://github.com/c0b41/musixmatch
+// addtl params: https://developer.musixmatch.com/documentation/input-parameters
+/**
+ * look for songs on musixmatch
+ * 
+ * @param  {string} formatted_terms
+ * 
+ * @return {array | null}
+ */
 async function musixSearch (formatted_terms='feel+good') {
-	const base_url = `http://api.musixmatch.com/ws/1.1/track.search?`
-	var musix_query = `${base_url}
+	var musix_query = `${mm_base_url}
 		q_lyrics=${formatted_terms}
 		&f_has_lyrics=1
 		&s_track_rating=DESC
@@ -136,13 +157,18 @@ async function musixSearch (formatted_terms='feel+good') {
 	try {
 		const res = await handleRequest(fetch.bind(null, musix_query))
 		const data = await handleRequest(res.json.bind(res))		
-		return data.message.body
+		return data ? data.message.body.track_list : null
 	} catch (err) {
 		console.log('MusixSearch error...', err)
 		return { error: true }
 	}
 }
 
-module.exports.musixmatch = musixSearch
-module.exports.spotifySearch = spotifySearch
-module.exports.searchAll = spotifySearch
+// module.exports.musixmatch = musixSearch
+// module.exports.spotifySearch = spotifySearch
+// module.exports.searchAll = searchAll
+module.exports = {
+	musixSearch,
+	spotifySearch,
+	searchAll,
+}
