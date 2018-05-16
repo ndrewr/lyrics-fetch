@@ -4,77 +4,74 @@ const fetch = require('node-fetch');
 const Spotify = require('spotify-web-api-node');
 
 // REQUIRED from external .env file (see pkg "dotenv")
-const {
-	MUSIXMATCH_KEY,
-	SPOTIFY_ID,
-	SPOTIFY_SEC,
-} = process.env
+const { MUSIXMATCH_KEY, SPOTIFY_ID, SPOTIFY_SEC } = process.env;
 
-const mm_base_url = `http://api.musixmatch.com/ws/1.1/track.search?`
+const mm_base_url = `http://api.musixmatch.com/ws/1.1/track.search?`;
 
 const spotifyApi = new Spotify({
-	clientId: SPOTIFY_ID,
-	clientSecret: SPOTIFY_SEC,
+  clientId: SPOTIFY_ID,
+  clientSecret: SPOTIFY_SEC
 });
-
 
 /**
  * Convenience wrapper for async reqeust calls in a try-catch
- * 
+ *
  * @param  {function} async_req
- * 
+ *
  * @return {promise}
  */
-async function handleRequest (async_req) {
-	try {
-		return await async_req()
-	} catch (err) {
-		console.error(`ruhroh: while calling ${async_req.name}...`, err)
-		return null
-	}
+async function handleRequest(async_req) {
+  try {
+    return await async_req();
+  } catch (err) {
+    console.error(`ruhroh: while calling ${async_req.name}...`, err);
+    return null;
+  }
 }
-
 
 /**
  * Aggregate search results from both services
- * 
+ *
  * @param  {string} formatted_terms
- * 
+ *
  * @return {object | null}
  */
-async function searchAll (formatted_terms) {
-	return formatted_terms ? 
-		{
-			musixMatch: await musixSearch(formatted_terms),
-			spotify: await spotifySearch(formatted_terms),
-		}
-		: null
+async function searchAll(formatted_terms) {
+  return formatted_terms
+    ? {
+        musixMatch: await musixSearch(formatted_terms),
+        spotify: await spotifySearch(formatted_terms)
+      }
+    : null;
 }
-
 
 // NOTE I saw a number of repeat results so I
 // run the response through a filter
 /**
  * look for songs on spotify
- * 
+ *
  * @param  {string} formatted_terms
- * 
+ *
  * @return {array | null}
  */
-async function spotifySearch (formatted_terms='chili') {
-	// Retrieve an access token.
-	const token = await handleRequest(spotifyApi.clientCredentialsGrant.bind(spotifyApi))
-	// console.log('The access token is ' + token.body['access_token']);
+async function spotifySearch(formatted_terms) {
+  // Retrieve an access token.
+  const token = await handleRequest(
+    spotifyApi.clientCredentialsGrant.bind(spotifyApi)
+  );
+  // console.log('The access token is ' + token.body['access_token']);
 
-	// Save the access token so that it's used in future calls
-	let results = null
-	if (token) {
-		spotifyApi.setAccessToken(token.body['access_token']);
-		const data = await handleRequest(spotifyApi.searchTracks.bind(spotifyApi, formatted_terms))
-		results = data.body.tracks.items
-	}
+  // Save the access token so that it's used in future calls
+  let results = null;
+  if (token) {
+    spotifyApi.setAccessToken(token.body['access_token']);
+    const data = await handleRequest(
+      spotifyApi.searchTracks.bind(spotifyApi, formatted_terms)
+    );
+    results = data.body.tracks.items;
+  }
 
-	return results
+  return results;
 }
 
 /*
@@ -140,35 +137,28 @@ function spotifySearch(formatted_terms) {
 // addtl params: https://developer.musixmatch.com/documentation/input-parameters
 /**
  * look for songs on musixmatch
- * 
+ *
  * @param  {string} formatted_terms
- * 
+ *
  * @return {array | null}
  */
-async function musixSearch (formatted_terms='feel+good') {
-	var musix_query = `${mm_base_url}
+async function musixSearch(formatted_terms) {
+  // insert params, remove newline chars
+  var musix_query = `${mm_base_url}
 		q_lyrics=${formatted_terms}
 		&f_has_lyrics=1
 		&s_track_rating=DESC
 		&f_lyrics_language=en
-		&page_size=15
-		&apikey=${MUSIXMATCH_KEY}`
+		&page_size=10
+		&apikey=${MUSIXMATCH_KEY}`.replace(/\s/g, '');
 
-	try {
-		const res = await handleRequest(fetch.bind(null, musix_query))
-		const data = await handleRequest(res.json.bind(res))		
-		return data ? data.message.body.track_list : null
-	} catch (err) {
-		console.log('MusixSearch error...', err)
-		return { error: true }
-	}
+  const res = await handleRequest(fetch.bind(null, musix_query));
+  const data = await handleRequest(res.json.bind(res));
+  return data ? data.message.body.track_list : null;
 }
 
-// module.exports.musixmatch = musixSearch
-// module.exports.spotifySearch = spotifySearch
-// module.exports.searchAll = searchAll
 module.exports = {
-	musixSearch,
-	spotifySearch,
-	searchAll,
-}
+  musixSearch,
+  spotifySearch,
+  searchAll
+};
