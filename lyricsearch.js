@@ -71,7 +71,6 @@ async function spotifySearch(formatted_terms) {
     const data = await handleRequest(
       spotifyApi.searchTracks.bind(spotifyApi, formatted_terms)
     );
-    console.log('spotify...', data);
     results = data.body.tracks.items;
   }
 

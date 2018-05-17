@@ -7,6 +7,7 @@
   "scripts": {
     "start": "micro",
     "precommit": "lint-staged",
+    "deploy": "now && now alias",
     "dev": "micro-dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -14,18 +15,20 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^5.0.1",
-    "husky": "^0.14.3",
-    "lint-staged": "^7.1.0",
     "micro": "^9.3.0",
     "node-fetch": "^2.1.2",
-    "prettier": "^1.12.1",
     "spotify-web-api-node": "^3.1.1"
   },
   "devDependencies": {
+    "prettier": "^1.12.1",
+    "husky": "^0.14.3",
+    "lint-staged": "^7.1.0",
     "micro-dev": "^2.2.2"
   },
   "now": {
-    "dotenv": true
+    "dotenv": true,
+    "name": "lyrix-api-v1",
+    "alias": "lyrix-api-v1.now.sh"
   },
   "lint-staged": {
     "./*.{js,json}": ["prettier --single-quote --write", "git add"]
