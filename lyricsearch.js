@@ -15,7 +15,7 @@ const spotifyApi = new Spotify({
 });
 
 /**
- * Convenience wrapper for async reqeust calls in a try-catch
+ * Convenience wrapper for async request calls in a try-catch
  *
  * @param  {function} async_req
  *
@@ -64,6 +64,32 @@ async function spotifySearch(formatted_terms) {
   );
   // console.log('The access token is ' + token.body['access_token']);
 
+  async function getMusixLyrics(track) {
+    // fetch a lyrics url from musixmatch
+    // using the title and name from spotify result
+    // NOTE: must be a nested async call
+    var track_lyrics;
+
+    const track_artist = track.artists[0].name;
+    const musix_query = `${mm_base_url}q_track=${
+      track.name
+    }&q_artist=${track_artist}&f_has_lyrics=1&apikey=${MUSIXMATCH_KEY}`;
+
+    const musix_result = await fetch(musix_query);
+
+    const data = await musix_result.json();
+
+    // const data = await handleRequest(musix_result.json.bind(musix_result));
+
+    var fetch_result = data.message.body.track_list;
+    console.log('result...', fetch_result);
+
+    if (fetch_result.length > 0) {
+      track_lyrics = fetch_result[0].track.track_share_url;
+    }
+    return { ...track, lyrics_url: track_lyrics };
+  }
+
   // Save the access token so that it's used in future calls
   let results = null;
   if (token) {
@@ -72,9 +98,11 @@ async function spotifySearch(formatted_terms) {
       spotifyApi.searchTracks.bind(spotifyApi, formatted_terms)
     );
     results = data.body.tracks.items;
+    results = await Promise.all(results.map(getMusixLyrics));
   }
 
   return results;
+  // return null
 }
 
 /*
@@ -116,24 +144,6 @@ function spotifySearch(formatted_terms) {
 					// push the results; track_url default undef
 					results_buffer.push(new Result("spotify", track_name, track_artist, track_album, track_cover, track_url, track_lyrics));
 				})
-				.fail(function(e) {
-					// on fail, alert home msg and push
-					// result object w/o lyrics url
-					self.message("Uh-oh! Problem fetching MusixMatch track...");
-				});
-			}
-		});
-	})
-		.always(function() {
-			// success or no, trigger a musixmatch search
-			musixSearch(formatted_terms);
-		})
-		.fail(function(e) {
-			// update home msg with status
-			self.message("Aw man! Problem with Spotify!");
-			app.informUser("Um. Spotify search error..try again?");
-		});
-}
 */
 
 // npm pkg: https://github.com/c0b41/musixmatch
@@ -159,7 +169,8 @@ async function musixSearch(formatted_terms) {
 
   const res = await handleRequest(fetch.bind(null, musix_query));
   const data = await handleRequest(res.json.bind(res));
-  return data ? data.message.body.track_list : null;
+  // return data ? data.message.body.track_list : null;
+  return null;
 }
 
 module.exports = {

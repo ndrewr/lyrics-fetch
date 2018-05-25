@@ -12,22 +12,18 @@ module.exports = async (req, res) => {
   if (req.url === '/favicon.ico') return 'NO favico for U!';
 
   var host = req.headers.host;
-  // var origin = req.headers.origin; // undefined
-  //   console.log(
-  //     'incoming...',
-  //     host,
-  //     ' and connection: ',
-  //     req.connection.remoteAddress
-  //   );
-  //   if (host !== 'localhost:3000') return 'Nope.';
+
+  console.log('incoming host...', host);
+
+  // filter incoming request by domain
+  const accepted_domains = ['localhost:3000', 'geomuze'];
+  if (!accepted_domains.includes(host)) return 'Unknown.';
 
   const formatted_terms = match(req, 'q');
-  //   console.log('url: ', req.url, '...result: ', formatted_terms);
 
-  if (formatted_terms && typeof formatted_terms === 'string') {
-    const all = await fetchLyrics.searchAll(formatted_terms);
-    send(res, 200, all);
-  } else return 'Bad query.';
+  return formatted_terms && typeof formatted_terms === 'string'
+    ? send(res, 200, await fetchLyrics.searchAll(formatted_terms))
+    : 'Bad query.';
 
   // return 'OK'
 };
