@@ -46,10 +46,7 @@ async function searchAll(formatted_terms) {
     : null;
 }
 
-// NOTE I saw a number of repeat results so I
-// run the response through a filter
-// NOTE: formatted_terms will get escaped by the spotifyApi lib;
-// passing in pre-escaped query breaks the search
+// TODO: I saw a number of repeat results so I run the response through a filter
 /**
  * look for songs on spotify
  *
@@ -64,90 +61,69 @@ async function spotifySearch(formatted_terms) {
   );
   // console.log('The access token is ' + token.body['access_token']);
 
-  async function getMusixLyrics(track) {
-    // fetch a lyrics url from musixmatch
-    // using the title and name from spotify result
-    // NOTE: must be a nested async call
-    var track_lyrics;
-
-    const track_artist = track.artists[0].name;
-    const musix_query = `${mm_base_url}q_track=${
-      track.name
-    }&q_artist=${track_artist}&f_has_lyrics=1&apikey=${MUSIXMATCH_KEY}`;
-
-    const musix_result = await fetch(musix_query);
-
-    const data = await musix_result.json();
-
-    // const data = await handleRequest(musix_result.json.bind(musix_result));
-
-    var fetch_result = data.message.body.track_list;
-    console.log('result...', fetch_result);
-
-    if (fetch_result.length > 0) {
-      track_lyrics = fetch_result[0].track.track_share_url;
-    }
-    return { ...track, lyrics_url: track_lyrics };
-  }
-
-  // Save the access token so that it's used in future calls
-  let results = null;
+  let results = [];
   if (token) {
+    // NOTE: formatted_terms get escaped by spotifyApi lib;
+    // passing in pre-escaped query breaks search
     spotifyApi.setAccessToken(token.body['access_token']);
     const data = await handleRequest(
       spotifyApi.searchTracks.bind(spotifyApi, formatted_terms)
     );
     results = data.body.tracks.items;
+    // get MusixMatch lyric link for spotify results
     results = await Promise.all(results.map(getMusixLyrics));
   }
 
   return results;
-  // return null
 }
 
-/*
-function spotifySearch(formatted_terms) {
-	results_buffer = [];
-	filter_list = []; // reset buffers
-	var spotify_query = 'https://api.spotify.com/v1/search?q=' + formatted_terms + '&type=track&limit=10';
-
-	$.getJSON(spotify_query, function(data) {
-		var track_list = data.tracks.items; // an array
-		track_list.forEach(function(track) {
-			var track_name = track.name;
-			var track_artist = track.artists[0].name;
-			var track_cover = track.album.images[2]? track.album.images[2].url : undefined;
-			var track_url = track.preview_url;
-			var track_album = track.album.name;
-
-			// check to see if this result already exists
-			if(!filter_list.alreadyInArray(track_name, track_artist)) {
-				// here I use filter_list as a temp holder
-				// for same-track check...cuz the real array is
-				// updated async!
-				filter_list.push(new Result("spotify", track_name, track_artist));
-
-				// fetch a lyrics url from musixmatch
-				// using the title and name from spotify result
-				// NOTE: must be a nested async call
-				var track_lyrics;
-				var musix_query = 'http://api.musixmatch.com/ws/1.1/track.search?q_track=' + track_name + '&q_artist=' + track_artist + '&format=JSONP' + '&f_has_lyrics=1&apikey=0bc726067d82f809bd3d1f7b5f0f7c2c';
-				$.getJSON(musix_query+'&callback=?', function(data) {
-					var fetch_result = data.message.body.track_list;
-					// check response for track
-					if (fetch_result.length > 0) {
-						var track = fetch_result[0];
-						track_lyrics = track.track.track_share_url;
-					}
-				})
-				.always(function() {
-					// push the results; track_url default undef
-					results_buffer.push(new Result("spotify", track_name, track_artist, track_album, track_cover, track_url, track_lyrics));
-				})
-*/
-
-// npm pkg: https://github.com/c0b41/musixmatch
+// TODO: switch to npm pkg: https://github.com/c0b41/musixmatch
 // addtl params: https://developer.musixmatch.com/documentation/input-parameters
+
+/**
+ * helper to access track list from MusixMatch api response
+ *
+ * @param  {object} data
+ *
+ * @return {array}
+ */
+function getMusixTrackList(data) {
+  return data ? data.message.body.track_list : [];
+}
+
+/**
+ * look for specific song on musixmatch based on spotify track result
+ *
+ * @param  {object} track
+ *
+ * @return {object}
+ */
+async function getMusixLyrics(track) {
+  const track_name = track.name;
+  const track_artist = track.artists[0].name;
+  const musix_query = `${mm_base_url}
+	q_track=${qs.escape(track_name)}
+	&q_artist=${qs.escape(track_artist)}
+	&f_has_lyrics=1
+	&apikey=${MUSIXMATCH_KEY}`.replace(/\s/g, '');
+  let lyrics_url = '';
+
+  if (track_name && track_artist) {
+    const res = await handleRequest(fetch.bind(null, musix_query));
+    const data = await handleRequest(res.json.bind(res));
+    const tracks = getMusixTrackList(data);
+
+    if (tracks.length) {
+      lyrics_url = tracks[0].track.track_share_url;
+    }
+  }
+
+  return {
+    ...track,
+    lyrics_url
+  };
+}
+
 /**
  * look for songs on musixmatch
  *
@@ -165,12 +141,9 @@ async function musixSearch(formatted_terms) {
 	&page_size=10
 	&apikey=${MUSIXMATCH_KEY}`.replace(/\s/g, '');
 
-  // console.log('musix...', musix_query)
-
   const res = await handleRequest(fetch.bind(null, musix_query));
   const data = await handleRequest(res.json.bind(res));
-  // return data ? data.message.body.track_list : null;
-  return null;
+  return getMusixTrackList(data);
 }
 
 module.exports = {
