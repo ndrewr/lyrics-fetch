@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
   console.log('incoming host...', host);
 
   // filter incoming request by domain
-  const accepted_domains = ['localhost:3000', 'geomuze'];
+  const accepted_domains = ['localhost:3000', 'ndrewr.github.io/geomuze'];
   if (!accepted_domains.includes(host)) return 'Unknown.';
 
   const formatted_terms = match(req, 'q');

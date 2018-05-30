@@ -49,6 +49,7 @@ async function searchAll(formatted_terms) {
 // TODO: I saw a number of repeat results so I run the response through a filter
 /**
  * look for songs on spotify
+ * uses https://github.com/thelinmichael/spotify-web-api-node
  *
  * @param  {string} formatted_terms
  *

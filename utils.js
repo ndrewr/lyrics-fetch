@@ -1,4 +1,5 @@
 // helper functions
+// see https://github.com/zeit/micro/issues/16#issuecomment-206983402
 
 const url = require('url');
 
