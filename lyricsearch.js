@@ -40,8 +40,9 @@ async function handleRequest(async_req) {
 async function searchAll(formatted_terms) {
   return formatted_terms
     ? {
-        musixMatch: await musixSearch(formatted_terms),
-        spotify: await spotifySearch(formatted_terms)
+        status: 'Success.',
+        musixMatch: await musixSearch(formatted_terms)
+        // spotify: await spotifySearch(formatted_terms)
       }
     : null;
 }
@@ -134,7 +135,7 @@ async function getMusixLyrics(track) {
  */
 async function musixSearch(formatted_terms) {
   // insert params, remove newline chars
-  var musix_query = `${mm_base_url}
+  const musix_query = `${mm_base_url}
 	q_lyrics=${qs.escape(formatted_terms)}
 	&f_has_lyrics=1
 	&s_track_rating=DESC
@@ -142,8 +143,12 @@ async function musixSearch(formatted_terms) {
 	&page_size=10
 	&apikey=${MUSIXMATCH_KEY}`.replace(/\s/g, '');
 
-  const res = await handleRequest(fetch.bind(null, musix_query));
-  const data = await handleRequest(res.json.bind(res));
+  // const res = await handleRequest(fetch.bind(null, musix_query));
+  const res = await fetch(musix_query);
+  console.log('mm: ', musix_query, res);
+  // return res
+  // const data = await handleRequest(res.json.bind(res));
+  const data = await res.json();
   return getMusixTrackList(data);
 }
 
