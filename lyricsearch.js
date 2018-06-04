@@ -41,8 +41,8 @@ async function searchAll(formatted_terms) {
   return formatted_terms
     ? {
         status: 'Success.',
-        musixMatch: await musixSearch(formatted_terms)
-        // spotify: await spotifySearch(formatted_terms)
+        musixMatch: await musixSearch(formatted_terms),
+        spotify: await spotifySearch(formatted_terms)
       }
     : null;
 }
@@ -143,12 +143,11 @@ async function musixSearch(formatted_terms) {
 	&page_size=10
 	&apikey=${MUSIXMATCH_KEY}`.replace(/\s/g, '');
 
-  // const res = await handleRequest(fetch.bind(null, musix_query));
-  const res = await fetch(musix_query);
-  console.log('mm: ', musix_query, res);
-  // return res
-  // const data = await handleRequest(res.json.bind(res));
-  const data = await res.json();
+  const res = await handleRequest(fetch.bind(null, musix_query));
+  // const res = await fetch(musix_query);
+  // console.log('mm: ', musix_query, res);
+  const data = await handleRequest(res.json.bind(res));
+  // const data = await res.json();
   return getMusixTrackList(data);
 }
 

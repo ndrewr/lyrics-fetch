@@ -9,6 +9,8 @@ const { match } = require('./utils');
 
 module.exports = async (req, res) => {
   // CORS
+  // TODO: address https://gist.github.com/balupton/3696140
+  // possibly replace w/ https://github.com/possibilities/micro-cors
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Request-Method', '*');
   res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET');
@@ -24,15 +26,16 @@ module.exports = async (req, res) => {
   console.log('incoming host...', incoming);
 
   // filter incoming request by domain
-  const local = /^(https?:\/\/)?localhost:[0-9]+\/?$/;
+  const dev = /^(https?:\/\/)?localhost:[0-9]+\/?$/;
+  const prod = /^(https?:\/\/)?ndrewr.github.io(\/geomuze)?\/?$/;
 
-  const accepted_domains = ['ndrewr.github.io/geomuze'];
-  if (!accepted_domains.includes(incoming) && !local.test(incoming)) {
+  // const accepted_domains = ['ndrewr.github.io/geomuze'];
+  // if (!accepted_domains.includes(incoming) && !dev.test(incoming)) {
+  if (!prod.test(incoming) && !dev.test(incoming)) {
     return send(res, 400, { status: 'Error: Unknown origin.' });
   }
 
   const formatted_terms = match(req, 'q');
-  // console.log('search for...', req.headers, formatted_terms)
 
   return formatted_terms && typeof formatted_terms === 'string'
     ? send(res, 200, await fetchLyrics.searchAll(formatted_terms))
