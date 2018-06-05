@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
 
   var incoming = req.headers.origin || req.headers.host;
 
-  console.log('incoming host...', incoming);
+  // console.log('incoming host...', incoming);
 
   // filter incoming request by domain
   const dev = /^(https?:\/\/)?localhost:[0-9]+\/?$/;

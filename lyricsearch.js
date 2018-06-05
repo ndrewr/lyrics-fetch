@@ -3,6 +3,7 @@
 const fetch = require('node-fetch');
 const Spotify = require('spotify-web-api-node');
 const qs = require('querystring');
+const { handleRequest } = require('./utils');
 
 // REQUIRED from external .env file (see pkg "dotenv")
 const { MUSIXMATCH_KEY, SPOTIFY_ID, SPOTIFY_SEC } = process.env;
@@ -24,22 +25,6 @@ function Result(service, track, artist, album, cover, url, lyrics) {
   this.lyrics_url = lyrics || '#';
   this.service = service || 'unaffiliated';
   this.album = album || 'No Album Title';
-}
-
-/**
- * Convenience wrapper for async request calls in a try-catch
- *
- * @param  {function} async_req
- *
- * @return {promise}
- */
-async function handleRequest(async_req) {
-  try {
-    return await async_req();
-  } catch (err) {
-    console.error(`ruhroh: while calling ${async_req.name}...`, err);
-    return null;
-  }
 }
 
 /**
@@ -215,10 +200,7 @@ async function musixSearch(formatted_terms) {
 	&apikey=${MUSIXMATCH_KEY}`.replace(/\s/g, '');
 
   const res = await handleRequest(fetch.bind(null, musix_query));
-  // const res = await fetch(musix_query);
-  // console.log('mm: ', musix_query, res);
   const data = await handleRequest(res.json.bind(res));
-  // const data = await res.json();
   // return getMusixTrackList(data);
   return processMusixResults(getMusixTrackList(data));
 }
