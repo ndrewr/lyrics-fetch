@@ -23,8 +23,6 @@ module.exports = async (req, res) => {
 
   var incoming = req.headers.origin || req.headers.host;
 
-  // console.log('incoming host...', incoming);
-
   // filter incoming request by domain
   const dev = /^(https?:\/\/)?localhost:[0-9]+\/?$/;
   const prod = /^(https?:\/\/)?ndrewr.github.io(\/geomuze)?\/?$/;
@@ -35,7 +33,13 @@ module.exports = async (req, res) => {
     return send(res, 400, { status: 'Error: Unknown origin.' });
   }
 
-  const formatted_terms = match(req, 'q');
+  const { com, q: formatted_terms } = match(req);
+
+  // Handle a "warmup" request; Useful while this micro-service is hosted on a free service
+  // that can be put to sleep.
+  if (com === 'hi') {
+    return '"One good thing about music, when it hits you, you feel no pain." - Bob Marley';
+  }
 
   return formatted_terms && typeof formatted_terms === 'string'
     ? send(res, 200, await fetchLyrics.searchAll(formatted_terms))
