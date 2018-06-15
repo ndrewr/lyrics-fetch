@@ -1,4 +1,6 @@
-// Music lyric search methods
+/* 
+  Music lyric search methods
+*/
 
 const fetch = require('node-fetch');
 const Spotify = require('spotify-web-api-node');
@@ -77,6 +79,53 @@ async function spotifySearch(formatted_terms) {
 }
 
 /**
+ * look for specific song sample url from Spotify based on MusixMatch result
+ *
+ * @param  {object} track
+ *
+ * @return {object}
+ */
+async function getSpotifySamples(tracks) {
+  // do we need to request the access token each time? Or is there a check we can do for a cached token?
+  // maybe can move this to the searchAll method
+  const token = await handleRequest(
+    spotifyApi.clientCredentialsGrant.bind(spotifyApi)
+  );
+
+  let results = [];
+  if (token) {
+    spotifyApi.setAccessToken(token.body['access_token']);
+
+    results = await Promise.all(
+      tracks.map(async track => {
+        let track_lyrics = null;
+
+        if (track.track_name && track.artist_name) {
+          // format the track and artist name from MusixMatch result for spotify query
+          const query = `track:${track.track_name} artist:${track.artist_name}`;
+
+          const data = await handleRequest(
+            spotifyApi.searchTracks.bind(spotifyApi, query)
+          );
+
+          const result = data.body.tracks.total
+            ? data.body.tracks.items[0]
+            : null;
+          track_lyrics = result ? result.preview_url : null;
+        }
+
+        return {
+          ...track,
+          url: track_lyrics
+        };
+      })
+    );
+  }
+
+  return results;
+}
+
+/**
  * Format results from Spotify search
  *
  * @param  {array} results
@@ -128,25 +177,18 @@ function getMusixTrackList(data) {
  * @return {array}
  */
 function processMusixResults(results) {
-  // NOTE I currently don't query for spotify url
-  // and stick undefined as placeholder
-  return results.map(track => {
-    var track_name = track.track_name;
-    var track_artist = track.artist_name;
-    var track_lyrics = track.track_share_url;
-    var track_cover = track.album_coverart_100x100;
-    var track_album = track.album_name;
-
-    return new Result(
-      'musix',
-      track_name,
-      track_artist,
-      track_album,
-      track_cover,
-      undefined,
-      track_lyrics
-    );
-  });
+  return results.map(
+    track =>
+      new Result(
+        'musix',
+        track.track_name,
+        track.artist_name,
+        track.album_name,
+        track.album_coverart_100x100,
+        track.url,
+        track.track_share_url
+      )
+  );
 }
 
 /**
@@ -201,8 +243,10 @@ async function musixSearch(formatted_terms) {
 
   const res = await handleRequest(fetch.bind(null, musix_query));
   const data = await handleRequest(res.json.bind(res));
-  // return getMusixTrackList(data);
-  return processMusixResults(getMusixTrackList(data));
+  const tracks = await handleRequest(
+    getSpotifySamples.bind(this, getMusixTrackList(data))
+  );
+  return processMusixResults(tracks);
 }
 
 module.exports = {
